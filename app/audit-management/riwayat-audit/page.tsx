@@ -1,0 +1,540 @@
+"use client";
+
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+import { supabase } from "@/lib/supabase";
+
+export default function RiwayatAuditPage() {
+  const [data, setData] =
+  useState<any[]>([]);
+
+const [startDate,
+  setStartDate] =
+  useState("");
+
+const [endDate,
+  setEndDate] =
+  useState("");
+
+const [
+  showExportMenu,
+  setShowExportMenu,
+] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+  const {
+    data: audits,
+    error,
+  } = await supabase
+    .from("audit_header")
+    .select("*")
+    .order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    );
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  const {
+    data: assets,
+  } = await supabase
+    .from("assets")
+    .select(
+      "id, asset_code, asset_name"
+    );
+
+  const result =
+    audits?.map(
+      (audit) => ({
+        ...audit,
+        asset:
+          assets?.find(
+            (a) =>
+              a.id ===
+              audit.asset_id
+          ),
+      })
+    ) || [];
+
+  setData(result);
+};
+const exportExcel = () => {
+  const today = new Date();
+
+  const fileDate =
+    String(today.getDate()).padStart(2, "0") +
+    String(today.getMonth() + 1).padStart(2, "0") +
+    today.getFullYear();
+
+  const exportData =
+    data.map((item) => ({
+      "No Audit":
+        item.audit_number,
+      "Asset Code":
+        item.asset?.asset_code,
+      "Nama Asset":
+        item.asset?.asset_name,
+      Auditor:
+        item.auditor,
+      Tanggal:
+        item.audit_date,
+      Status:
+        "PASS",
+    }));
+
+  const worksheet =
+    XLSX.utils.json_to_sheet(
+      exportData
+    );
+
+  const workbook =
+    XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    "Riwayat Audit"
+  );
+
+  XLSX.writeFile(
+    workbook,
+    `Riwayat_Audit_${fileDate}.xlsx`
+  );
+
+  setShowExportMenu(false);
+};
+
+const exportPDF = () => {
+  const today = new Date();
+
+  const fileDate =
+    String(today.getDate()).padStart(2, "0") +
+    String(today.getMonth() + 1).padStart(2, "0") +
+    today.getFullYear();
+
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+
+  doc.text(
+    "Audit Asset Warehouse",
+    14,
+    20
+  );
+
+  doc.setFontSize(10);
+
+  doc.text(
+    `Tanggal Export : ${fileDate}`,
+    14,
+    28
+  );
+
+  autoTable(doc, {
+    startY: 35,
+    head: [[
+      "No Audit",
+      "Asset",
+      "Auditor",
+      "Tanggal",
+      "Status",
+    ]],
+    body: data.map(
+      (item) => [
+        item.audit_number,
+        item.asset?.asset_code,
+        item.auditor,
+        item.audit_date,
+        "PASS",
+      ]
+    ),
+  });
+
+  doc.save(
+    `Riwayat_Audit_${fileDate}.pdf`
+  );
+
+  setShowExportMenu(false);
+};
+  return (
+  <div
+  style={{
+    background: "#fff",
+    padding: "24px",
+    borderRadius: "16px",
+    boxShadow:
+      "0 1px 3px rgba(0,0,0,.06)",
+  }}
+>
+    <div
+  style={{
+    display: "flex",
+    justifyContent:
+      "space-between",
+    alignItems:
+      "center",
+    marginBottom:
+      "20px",
+  }}
+>
+  <div>
+    <h1
+      style={{
+        marginBottom:
+          "5px",
+      }}
+    >
+      Riwayat Audit
+    </h1>
+
+    <p
+      style={{
+        color:
+          "#64748b",
+      }}
+    >
+      Total Audit :
+      {data.length}
+    </p>
+  </div>
+
+  
+
+  <div
+  style={{
+    display:
+      "flex",
+    gap: "10px",
+    alignItems:
+      "center",
+  }}
+>
+
+  <input
+    type="date"
+    value={startDate}
+    onChange={(e) =>
+      setStartDate(
+        e.target.value
+      )
+    }
+    style={{
+      padding:
+        "10px",
+      border:
+        "1px solid #ddd",
+      borderRadius:
+        "8px",
+    }}
+  />
+
+  <input
+    type="date"
+    value={endDate}
+    onChange={(e) =>
+      setEndDate(
+        e.target.value
+      )
+    }
+    style={{
+      padding:
+        "10px",
+      border:
+        "1px solid #ddd",
+      borderRadius:
+        "8px",
+    }}
+  />
+
+  <div
+    style={{
+      position:
+        "relative",
+    }}
+  >
+    
+    <button
+      onClick={() =>
+        setShowExportMenu(
+          !showExportMenu
+        )
+      }
+      style={{
+        background:
+          "#16a34a",
+        color:
+          "#fff",
+        border:
+          "none",
+        padding:
+          "12px 18px",
+        borderRadius:
+          "8px",
+        cursor:
+          "pointer",
+        fontWeight:
+          "bold",
+      }}
+    >
+      Export ▼
+    </button>
+
+    {showExportMenu && (
+      <div
+        style={{
+          position:
+            "absolute",
+          right: 0,
+          top: "50px",
+          background:
+            "#fff",
+          border:
+            "1px solid #ddd",
+          borderRadius:
+            "8px",
+          minWidth:
+            "180px",
+          boxShadow:
+            "0 4px 12px rgba(0,0,0,.1)",
+          zIndex:
+            999,
+        }}
+      >
+        <button
+          onClick={
+            exportExcel
+          }
+          style={{
+            width:
+              "100%",
+            padding:
+              "12px",
+            border:
+              "none",
+            background:
+              "#fff",
+            cursor:
+              "pointer",
+            textAlign:
+              "left",
+          }}
+        >
+          📊 Excel
+        </button>
+
+        <button
+          onClick={
+            exportPDF
+          }
+          style={{
+            width:
+              "100%",
+            padding:
+              "12px",
+            border:
+              "none",
+            background:
+              "#fff",
+            cursor:
+              "pointer",
+            textAlign:
+              "left",
+          }}
+        >
+          📄 PDF
+        </button>
+      </div>
+    )}
+    </div>
+  </div>
+</div>
+
+   
+  
+  <table
+  style={{
+    width: "100%",
+    borderCollapse: "separate",
+    borderSpacing: 0,
+    overflow: "hidden",
+    borderRadius: "12px",
+  }}
+>
+    
+        <thead>
+          <tr>
+            <th
+              style={thStyle}
+            >
+              No Audit
+            </th>
+
+            <th
+              style={thStyle}
+            >
+              Asset ID
+            </th>
+
+            <th
+              style={thStyle}
+            >
+              Auditor
+            </th>
+
+            <th
+              style={thStyle}
+            >
+              Tanggal
+            </th>
+            <th style={thStyle}>
+  Status
+</th>
+            <th
+  style={thStyle}
+>
+  Action
+</th>
+
+          </tr>
+        </thead>
+
+        <tbody>
+          {data.map(
+            (
+              item
+            ) => (
+              <tr
+                key={
+                  item.id
+                }
+              >
+                <td
+                  style={
+                    tdStyle
+                  }
+                >
+                  {
+                    item.audit_number
+                  }
+                </td>
+
+                <td style={tdStyle}>
+  <div>
+    <div
+      style={{
+        fontWeight: "bold",
+        color: "#0f172a",
+      }}
+    >
+      {item.asset?.asset_code}
+    </div>
+
+    <div
+      style={{
+        fontSize: "13px",
+        color: "#64748b",
+        marginTop: "3px",
+      }}
+    >
+      {item.asset?.asset_name}
+    </div>
+  </div>
+</td>
+
+                <td
+                  style={
+                    tdStyle
+                  }
+                >
+                  {
+                    item.auditor
+                  }
+                </td>
+
+                <td
+                  style={
+                    tdStyle
+                  }
+                >
+                  {
+                    item.audit_date
+                  }
+                </td>
+                <td style={tdStyle}>
+  <span
+    style={{
+  background:"#2563eb",
+  color:"#fff",
+  border:"none",
+  padding:"10px 18px",
+  borderRadius:"8px",
+  cursor:"pointer",
+  fontWeight:"600",
+}}
+  >
+    PASS
+  </span>
+</td>
+                <td
+  style={tdStyle}
+>
+  <button
+    onClick={() =>
+      window.location.href =
+        `/audit-management/riwayat-audit/${item.id}`
+    }
+    style={{
+      background:
+        "#2563eb",
+      color: "#fff",
+      border: "none",
+      padding:
+        "8px 12px",
+      borderRadius:
+        "6px",
+      cursor:
+        "pointer",
+    }}
+  >
+    Detail
+  </button>
+</td>
+              </tr>
+            )
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const thStyle = {
+  background:"#081028",
+  color:"#fff",
+  padding:"18px",
+  fontWeight:"600",
+  fontSize:"14px",
+  textAlign:"left" as const,
+};
+
+const tdStyle = {
+  padding: "18px 16px",
+  borderBottom: "1px solid #e5e7eb",
+  verticalAlign: "middle" as const,
+};
