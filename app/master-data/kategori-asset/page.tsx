@@ -1,15 +1,36 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { supabase } from "@/lib/supabase";
 import KategoriAssetSasg from "./KategoriAssetSasg";
 
 export default async function KategoriAssetPage() {
-  const { data, error } = await supabase
+  const {
+    data,
+    error,
+  } = await supabase
     .from("categories")
     .select("*")
-    .order("id");
+    .order("id", {
+      ascending: false,
+    });
 
   if (error) {
-    return <div>Error: {error.message}</div>;
+    return (
+      <div
+        style={{
+          padding: "20px",
+          color: "red",
+        }}
+      >
+        Error: {error.message}
+      </div>
+    );
   }
 
-  return <KategoriAssetSasg data={data ?? []} />;
+  return (
+    <KategoriAssetSasg
+      data={data || []}
+    />
+  );
 }
