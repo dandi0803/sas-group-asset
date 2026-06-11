@@ -58,21 +58,49 @@ const [
     .select(
       "id, asset_code, asset_name"
     );
+const result = await Promise.all(
+  (audits || []).map(
+    async (audit) => {
 
-  const result =
-    audits?.map(
-      (audit) => ({
+      const {
+        data: details,
+      } = await supabase
+        .from("audit_detail")
+        .select(
+          "condition"
+        )
+        .eq(
+          "audit_id",
+          audit.id
+        );
+
+      const hasFail =
+        details?.some(
+          (x) =>
+            x.condition ===
+            "Tidak Baik"
+        );
+
+      return {
         ...audit,
+
         asset:
           assets?.find(
             (a) =>
               a.id ===
               audit.asset_id
           ),
-      })
-    ) || [];
 
-  setData(result);
+        audit_status:
+          hasFail
+            ? "FAIL"
+            : "PASS",
+      };
+    }
+  )
+);
+
+setData(result);
 };
 const exportExcel = () => {
   const today = new Date();
@@ -95,7 +123,7 @@ const exportExcel = () => {
       Tanggal:
         item.audit_date,
       Status:
-        "PASS",
+  item.audit_status,
     }));
 
   const worksheet =
@@ -161,7 +189,7 @@ const exportPDF = () => {
         item.asset?.asset_code,
         item.auditor,
         item.audit_date,
-        "PASS",
+        item.audit_status,
       ]
     ),
   });
@@ -476,19 +504,21 @@ const exportPDF = () => {
                     item.audit_date
                   }
                 </td>
-                <td style={tdStyle}>
+<td style={tdStyle}>
   <span
     style={{
-  background:"#2563eb",
-  color:"#fff",
-  border:"none",
-  padding:"10px 18px",
-  borderRadius:"8px",
-  cursor:"pointer",
-  fontWeight:"600",
-}}
+      background:
+        item.audit_status === "PASS"
+          ? "#16a34a"
+          : "#dc2626",
+
+      color: "#fff",
+      padding: "10px 18px",
+      borderRadius: "8px",
+      fontWeight: "600",
+    }}
   >
-    PASS
+    {item.audit_status}
   </span>
 </td>
                 <td
