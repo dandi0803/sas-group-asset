@@ -97,7 +97,7 @@ export default function LoginPage() {
               fontWeight: 700,
             }}
           >
-            Asset Management
+            SAS GROUP
           </h2>
 
           <p
@@ -106,7 +106,7 @@ export default function LoginPage() {
               color: "#64748b",
             }}
           >
-            Login ke Sistem Asset SAS Group
+            Login ke Sistem Asset
           </p>
         </div>
 
