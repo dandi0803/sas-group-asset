@@ -38,6 +38,11 @@ const [
   setShowExportMenu,
 ] = useState(false);
 
+const [currentPage, setCurrentPage] =
+  useState(1);
+
+const itemsPerPage = 10;
+
 const exportExcel = () => {
   const data = filteredAssets.map(
     (item: any) => ({
@@ -163,30 +168,27 @@ doc.save(
         const keyword =
           search.toLowerCase();
 
-        return (
-          item.asset_code
-            ?.toLowerCase()
-            .includes(
-              keyword
-            ) ||
-          item.asset_name
-            ?.toLowerCase()
-            .includes(
-              keyword
-            ) ||
-          item.brand
-            ?.toLowerCase()
-            .includes(
-              keyword
-            ) ||
-          item.location
-            ?.toLowerCase()
-            .includes(
-              keyword
-            )
-        );
+        return JSON.stringify(item)
+  .toLowerCase()
+  .includes(keyword);
       }
     );
+
+    const totalPages =
+  Math.ceil(
+    filteredAssets.length /
+      itemsPerPage
+  );
+
+const startIndex =
+  (currentPage - 1) *
+  itemsPerPage;
+
+const currentAssets =
+  filteredAssets.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   const getStatusBadge =
     (status: string) => {
@@ -478,8 +480,8 @@ doc.save(
               "#fff",
             borderRadius:
               "12px",
-            overflow:
-              "hidden",
+            overflowX:
+  "auto",
             boxShadow:
               "0 2px 10px rgba(0,0,0,.08)",
           }}
@@ -501,58 +503,26 @@ doc.save(
                     "#fff",
                 }}
               >
-                <th
-                  style={
-                    th
-                  }
-                >
-                  Kode
-                </th>
-
-                <th
-                  style={
-                    th
-                  }
-                >
-                  Asset
-                </th>
-
-                <th
-                  style={
-                    th
-                  }
-                >
-                  Brand
-                </th>
-
-                <th
-                  style={
-                    th
-                  }
-                >
-                  Status
-                </th>
-
-                <th
-                  style={
-                    th
-                  }
-                >
-                  Lokasi
-                </th>
-
-                <th
-                  style={
-                    th
-                  }
-                >
-                  Action
-                </th>
+<th style={th}>Kategori</th>
+<th style={th}>Jenis Asset</th>
+<th style={th}>Kode</th>
+<th style={th}>Asset</th>
+<th style={th}>Brand</th>
+<th style={th}>Serial Number</th>
+<th style={th}>Kondisi</th>
+<th style={th}>Foto</th>
+<th style={th}>Status</th>
+<th style={th}>Lokasi</th>
+<th style={th}>User Assigned</th>
+<th style={th}>Tanggal Beli</th>
+<th style={th}>Harga</th>
+<th style={th}>Catatan</th>
+<th style={th}>Action</th>
               </tr>
             </thead>
 
             <tbody>
-              {filteredAssets.map(
+              {currentAssets.map(
                 (
                   item: any
                 ) => (
@@ -565,60 +535,78 @@ doc.save(
                         "1px solid #e5e7eb",
                     }}
                   >
-                    <td
-                      style={
-                        td
-                      }
-                    >
-                      {
-                        item.asset_code
-                      }
-                    </td>
+                    
 
-                    <td
-                      style={
-                        td
-                      }
-                    >
-                      {
-                        item.asset_name
-                      }
-                    </td>
+<td style={td}>
+  {item.categories?.name || "-"}
+</td>
 
-                    <td
-                      style={
-                        td
-                      }
-                    >
-                      {
-                        item.brand
-                      }
-                    </td>
+<td style={td}>
+  {item.asset_types?.name || "-"}
+</td>
 
-                    <td
-                      style={
-                        td
-                      }
-                    >
-                      {getStatusBadge(
-                        item.status
-                      )}
-                    </td>
+<td style={td}>
+  {item.asset_code}
+</td>
 
-                    <td
-                      style={
-                        td
-                      }
-                    >
-                      {
-                        item.location
-                      }
-                    </td>
+<td style={td}>
+  {item.asset_name}
+</td>
 
-                    <td
-                      style={
-                        td
-                      }
+<td style={td}>
+  {item.brand || "-"}
+</td>
+
+<td style={td}>
+  {item.serial_number || "-"}
+</td>
+
+<td style={td}>
+  {item.condition || "-"}
+</td>
+
+<td style={td}>
+  {item.photo_url ? (
+    <img
+      src={item.photo_url}
+      alt={item.asset_name}
+      style={{
+        width: "60px",
+        height: "60px",
+        objectFit: "cover",
+        borderRadius: "8px",
+      }}
+    />
+  ) : (
+    "-"
+  )}
+</td>
+
+<td style={td}>
+  {getStatusBadge(item.status)}
+</td>
+
+<td style={td}>
+  {item.location || "-"}
+</td>
+
+<td style={td}>
+  {item.user_assigned || "-"}
+</td>
+
+<td style={td}>
+  {item.purchase_date || "-"}
+</td>
+
+<td style={td}>
+  {item.purchase_price || "-"}
+</td>
+
+<td style={td}>
+  {item.notes || "-"}
+</td>
+
+                    <td style={td}
                     >
                       <div
                         style={{
@@ -690,7 +678,7 @@ doc.save(
                 <tr>
                   <td
                     colSpan={
-                      6
+                      15
                     }
                     style={{
                       padding:
@@ -706,7 +694,42 @@ doc.save(
               )}
             </tbody>
           </table>
-        </div>
+
+<div
+  style={{
+    display: "flex",
+    justifyContent: "center",
+    gap: "8px",
+    padding: "20px",
+  }}
+>
+  <button
+    disabled={currentPage === 1}
+    onClick={() =>
+      setCurrentPage(currentPage - 1)
+    }
+  >
+    Previous
+  </button>
+
+  <span>
+    Page {currentPage} / {totalPages || 1}
+  </span>
+
+  <button
+    disabled={
+      currentPage === totalPages ||
+      totalPages === 0
+    }
+    onClick={() =>
+      setCurrentPage(currentPage + 1)
+    }
+  >
+    Next
+  </button>
+</div>
+
+</div>
               </div>
 
       <AddAssetSasg

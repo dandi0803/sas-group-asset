@@ -5,12 +5,20 @@ import DataAssetSasg from "./DataAssetSasg";
 
 export default async function DataAssetPage() {
   const { data: assets, error } =
-    await supabase
-      .from("assets")
-      .select("*")
-      .order("id", {
-        ascending: false,
-      });
+  await supabase
+    .from("assets")
+    .select(`
+      *,
+      categories (
+  name
+),
+      asset_types (
+  name
+)
+    `)
+    .order("id", {
+      ascending: false,
+    });
 
   const { data: categories } =
     await supabase

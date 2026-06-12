@@ -30,7 +30,16 @@ export default function AddAssetSasg({
 }: Props) {
   const [loading, setLoading] =
     useState(false);
-    
+    const [
+  selectedFile,
+  setSelectedFile,
+] = useState<File | null>(
+  null
+);
+  const [
+  previewUrl,
+  setPreviewUrl,
+] = useState("");  
 
   const [form, setForm] =
     useState({
@@ -62,6 +71,7 @@ export default function AddAssetSasg({
 
   useEffect(() => {
     if (!asset) {
+      setSelectedFile(null);
       setForm({
         asset_code: "",
         asset_name: "",
@@ -182,7 +192,47 @@ if (!form.status_id) {
   );
   return;
 }
+let photoUrl =
+  asset?.photo_url || "";
 
+if (selectedFile) {
+  const fileExt =
+    selectedFile.name
+      .split(".")
+      .pop();
+
+  const fileName =
+    `asset-${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } =
+    await supabase.storage
+      .from("asset-photo")
+      .upload(
+        fileName,
+        selectedFile,
+        {
+          upsert: true,
+        }
+      );
+      console.log("UPLOAD ERROR:", uploadError);
+
+  if (uploadError) {
+    alert(
+  JSON.stringify(uploadError)
+);
+    return;
+  }
+
+  const { data } =
+    supabase.storage
+      .from("asset-photo")
+      .getPublicUrl(
+        fileName
+      );
+
+  photoUrl =
+    data.publicUrl;
+}
         const payload = {
           asset_code:
             form.asset_code,
@@ -236,7 +286,11 @@ if (!form.status_id) {
               : null,
 
           notes:
-            form.notes,
+  form.notes,
+
+photo_url:
+  photoUrl,
+
         };
 
         let error = null;
@@ -740,9 +794,126 @@ if (!form.status_id) {
               "20px",
           }}
         >
+          <div
+  style={{
+    marginBottom: "20px",
+  }}
+>
+  <label
+    style={{
+      display: "block",
+      marginBottom: "10px",
+      fontWeight: "600",
+    }}
+  >
+    Foto Asset
+  </label>
+
+  <div
+    style={{
+      display: "flex",
+      gap: "15px",
+    }}
+  >
+
+    <label
+      htmlFor="cameraInput"
+      style={photoCardStyle}
+    >
+      <div
+        style={{
+          fontSize: "42px",
+        }}
+      >
+        📷
+      </div>
+
+      <div>
+        Kamera
+      </div>
+    </label>
+
+    <label
+      htmlFor="galleryInput"
+      style={photoCardStyle}
+    >
+      <div
+        style={{
+          fontSize: "42px",
+        }}
+      >
+        🖼️
+      </div>
+
+      <div>
+        Galeri
+      </div>
+    </label>
+
+  </div>
+
+  <input
+    id="cameraInput"
+    type="file"
+    accept="image/*"
+    capture="environment"
+    style={{
+      display: "none",
+    }}
+    onChange={(e) => {
+
+      const file =
+        e.target.files?.[0];
+
+      if (!file) return;
+
+      setSelectedFile(file);
+
+      setPreviewUrl(
+        URL.createObjectURL(file)
+      );
+    }}
+  />
+
+  <input
+    id="galleryInput"
+    type="file"
+    accept="image/*"
+    style={{
+      display: "none",
+    }}
+    onChange={(e) => {
+
+      const file =
+        e.target.files?.[0];
+
+      if (!file) return;
+
+      setSelectedFile(file);
+
+      setPreviewUrl(
+        URL.createObjectURL(file)
+      );
+    }}
+  />
+
+  {previewUrl && (
+    <img
+      src={previewUrl}
+      alt="Preview"
+      style={{
+        width: "220px",
+        marginTop: "15px",
+        borderRadius: "12px",
+        border: "1px solid #ddd",
+      }}
+    />
+  )}
+</div>
           <label>
             Catatan
           </label>
+          
 
           <textarea
             rows={5}
@@ -864,4 +1035,17 @@ const inputStyle = {
   borderRadius:
     "6px",
   outline: "none",
+};
+const photoCardStyle = {
+  width: "150px",
+  height: "120px",
+  border: "2px dashed #cbd5e1",
+  borderRadius: "12px",
+  display: "flex",
+  flexDirection: "column" as const,
+  justifyContent: "center",
+  alignItems: "center",
+  cursor: "pointer",
+  background: "#f8fafc",
+  fontWeight: "600",
 };

@@ -20,55 +20,45 @@ export default function DetailAuditPage() {
   }, [params]);
 
   const loadData =
-    async () => {
-      const { data: audit } =
-        await supabase
-          .from("audit_header")
-          .select("*")
-          .eq(
-            "id",
-            params.id
+  async () => {
+    const { data: audit } =
+      await supabase
+        .from("audit_header")
+        .select("*")
+        .eq("id", params.id)
+        .single();
+
+    setHeader(audit);
+
+    const { data: detailData } =
+      await supabase
+        .from("audit_detail")
+        .select(`
+          *,
+          audit_photos (
+            id,
+            photo_url
           )
-          .single();
+        `)
+        .eq("audit_id", params.id);
 
-      setHeader(audit);
+    const { data: items } =
+      await supabase
+        .from("audit_template_items")
+        .select("id,item_name");
 
-     const {
-  data: detailData,
-} = await supabase
-  .from("audit_detail")
-  .select("*")
-  .eq(
-    "audit_id",
-    params.id
-  );
+    const result =
+      detailData?.map((detail) => ({
+        ...detail,
+        item_name:
+          items?.find(
+            (x) =>
+              x.id === detail.audit_item_id
+          )?.item_name,
+      })) || [];
 
-const {
-  data: items,
-} = await supabase
-  .from(
-    "audit_template_items"
-  )
-  .select(
-    "id,item_name"
-  );
-
-const result =
-  detailData?.map(
-    (detail) => ({
-      ...detail,
-      item_name:
-        items?.find(
-          (x) =>
-            x.id ===
-            detail.audit_item_id
-        )?.item_name,
-    })
-  ) || [];
-
-setDetails(result);
-
-    };
+    setDetails(result);
+  };
 
   if (!header) {
     return (
@@ -150,12 +140,17 @@ setDetails(result);
           </th>
 
           <th style={thStyle}>
-            Hasil
-          </th>
+  Hasil
+</th>
 
-          <th style={thStyle}>
-            Remark
-          </th>
+<th style={thStyle}>
+  Foto
+</th>
+
+<th style={thStyle}>
+  Remark
+</th>
+
         </tr>
       </thead>
 
@@ -226,6 +221,37 @@ setDetails(result);
           </span>
         )}
       </td>
+<td style={tdStyle}>
+  {item.audit_photos &&
+  item.audit_photos.length > 0 ? (
+    <div
+      style={{
+        display: "flex",
+        gap: "8px",
+        flexWrap: "wrap",
+      }}
+    >
+      {item.audit_photos.map(
+        (photo: any) => (
+          <img
+            key={photo.id}
+            src={photo.photo_url}
+            alt="Foto Audit"
+            style={{
+              width: "70px",
+              height: "70px",
+              objectFit: "cover",
+              borderRadius: "8px",
+              border: "1px solid #e5e7eb",
+            }}
+          />
+        )
+      )}
+    </div>
+  ) : (
+    "-"
+  )}
+</td>
 
       <td
         style={

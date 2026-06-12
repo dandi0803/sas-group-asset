@@ -13,8 +13,12 @@ export default function AuditAssetPage() {
   const [auditItems, setAuditItems] =
     useState<any[]>([]);
 
-  const [notes, setNotes] =
-    useState("");
+
+    const [notes, setNotes] =
+  useState("");
+
+const [auditPhotos, setAuditPhotos] =
+  useState<any>({});
 
   useEffect(() => {
     loadAssets();
@@ -183,28 +187,80 @@ export default function AuditAssetPage() {
         );
 
       const {
-        error:
-          detailError,
-      } =
-        await supabase
-          .from(
-            "audit_detail"
-          )
-          .insert(
-            details
-          );
+  data: detailData,
+  error: detailError,
+} =
+  await supabase
+    .from("audit_detail")
+    .insert(details)
+    .select();
 
-      if (
-        detailError
-      ) {
-        console.log(
-          detailError
-        );
-        alert(
-          "Gagal simpan detail audit"
-        );
-        return;
-      }
+if (detailError) {
+  console.log(detailError);
+  alert("Gagal simpan detail audit");
+  return;
+}
+
+for (const detail of detailData || []) {
+  const files = auditPhotos[detail.audit_item_id];
+
+  if (!files || files.length === 0) {
+    continue;
+  }
+
+  for (const file of Array.from(files) as File[]) {
+    const ext = file.name.split(".").pop();
+
+    const fileName = `${detail.id}-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2)}.${ext}`;
+
+    const filePath = `audit/${fileName}`;
+
+    const { error: uploadError } =
+      await supabase.storage
+        .from("audit-photo")
+        .upload(filePath, file);
+
+    if (uploadError) {
+  console.log("UPLOAD ERROR:", uploadError);
+  alert("Foto gagal upload: " + uploadError.message);
+  continue;
+}
+
+    const { data: publicUrlData } =
+      supabase.storage
+        .from("audit-photo")
+        .getPublicUrl(filePath);
+
+   const { data: photoInsert, error: photoError } =
+  await supabase
+    .from("audit_photos")
+    .insert({
+      audit_detail_id: detail.id,
+      photo_url: publicUrlData.publicUrl,
+    })
+    .select();
+
+console.log(
+  "PHOTO INSERT",
+  photoInsert
+);
+
+console.log(
+  "PHOTO ERROR",
+  photoError
+);
+
+if (photoError) {
+  console.log("PHOTO ERROR:", photoError);
+  alert(
+    "URL foto gagal disimpan : " +
+      photoError.message
+  );
+}
+  }
+}
 
       alert(
         "Audit berhasil disimpan"
@@ -375,20 +431,28 @@ export default function AuditAssetPage() {
                     </th>
 
                     <th
-                      style={
-                        thStyle
-                      }
-                    >
-                      Hasil
-                    </th>
+  style={
+    thStyle
+  }
+>
+  Hasil
+</th>
 
-                    <th
-                      style={
-                        thStyle
-                      }
-                    >
-                      Remark
-                    </th>
+<th
+  style={
+    thStyle
+  }
+>
+  Foto
+</th>
+
+<th
+  style={
+    thStyle
+  }
+>
+  Remark
+</th>
                   </tr>
                 </thead>
 
@@ -479,39 +543,54 @@ export default function AuditAssetPage() {
                           </label>
                         </td>
 
-                        <td
-                          style={
-                            tdStyle
-                          }
-                        >
-                          <input
-                            value={
-                              item.remarks
-                            }
-                            onChange={(
-                              e
-                            ) =>
-                              updateItem(
-                                item.id,
-                                "remarks",
-                                e
-                                  .target
-                                  .value
-                              )
-                            }
-                            placeholder="Remark..."
-                            style={{
-                              width:
-                                "100%",
-                              padding:
-                                "8px",
-                              border:
-                                "1px solid #d1d5db",
-                              borderRadius:
-                                "6px",
-                            }}
-                          />
-                        </td>
+                        <td style={tdStyle}>
+  <label
+    style={{
+      cursor: "pointer",
+      fontSize: "24px",
+    }}
+  >
+    📷
+
+    <input
+      type="file"
+      multiple
+      accept="image/*"
+      style={{
+        display: "none",
+      }}
+      onChange={(e) =>
+        setAuditPhotos({
+          ...auditPhotos,
+          [item.id]:
+            e.target.files,
+        })
+      }
+    />
+  </label>
+</td>
+
+<td style={tdStyle}>
+  <input
+    value={
+      item.remarks
+    }
+    onChange={(e) =>
+      updateItem(
+        item.id,
+        "remarks",
+        e.target.value
+      )
+    }
+    placeholder="Remark..."
+    style={{
+      width: "100%",
+      padding: "8px",
+      border: "1px solid #d1d5db",
+      borderRadius: "6px",
+    }}
+  />
+</td>
                       </tr>
                     )
                   )}
