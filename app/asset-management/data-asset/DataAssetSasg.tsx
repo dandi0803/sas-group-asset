@@ -163,18 +163,16 @@ doc.save(
   };
 
   const filteredAssets =
-    assets.filter(
-      (item: any) => {
-        const keyword =
-          search.toLowerCase();
+  assets.filter((item: any) => {
+    const keyword =
+      search.toLowerCase();
 
-        return JSON.stringify(item)
-  .toLowerCase()
-  .includes(keyword);
-      }
-    );
+    return JSON.stringify(item)
+      .toLowerCase()
+      .includes(keyword);
+  });
 
-    const totalPages =
+const totalPages =
   Math.ceil(
     filteredAssets.length /
       itemsPerPage
@@ -187,8 +185,11 @@ const startIndex =
 const currentAssets =
   filteredAssets.slice(
     startIndex,
-    startIndex + itemsPerPage
+    startIndex +
+      itemsPerPage
   );
+
+    
 
   const getStatusBadge =
     (status: string) => {
@@ -482,18 +483,22 @@ const currentAssets =
               "12px",
             overflowX:
   "auto",
+overflowY:
+  "hidden",
             boxShadow:
               "0 2px 10px rgba(0,0,0,.08)",
           }}
         >
           <table
-            style={{
-              width:
-                "100%",
-              borderCollapse:
-                "collapse",
-            }}
-          >
+  style={{
+    width:
+      "100%",
+    minWidth:
+      "2200px",
+    borderCollapse:
+      "collapse",
+  }}
+>
             <thead>
               <tr
                 style={{
@@ -694,13 +699,15 @@ const currentAssets =
               )}
             </tbody>
           </table>
+</div>
 
 <div
   style={{
     display: "flex",
     justifyContent: "center",
-    gap: "8px",
-    padding: "20px",
+    alignItems: "center",
+    gap: "10px",
+    marginTop: "20px",
   }}
 >
   <button
@@ -713,7 +720,7 @@ const currentAssets =
   </button>
 
   <span>
-    Page {currentPage} / {totalPages || 1}
+    Page {currentPage} of {totalPages || 1}
   </span>
 
   <button
@@ -730,7 +737,6 @@ const currentAssets =
 </div>
 
 </div>
-              </div>
 
       <AddAssetSasg
         open={
