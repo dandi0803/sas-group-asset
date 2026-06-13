@@ -19,6 +19,8 @@ export default function AuditAssetPage() {
 
 const [auditPhotos, setAuditPhotos] =
   useState<any>({});
+  const [searchAsset, setSearchAsset] =
+  useState("");
 
   useEffect(() => {
     loadAssets();
@@ -297,57 +299,84 @@ if (photoError) {
       </p>
 
       <div
-        style={{
-          marginTop: "20px",
-          marginBottom: "25px",
-        }}
-      >
-        <select
-          value={
-            selectedAsset?.id ||
-            ""
-          }
-          onChange={(e) =>
+  style={{
+    marginTop: "20px",
+    marginBottom: "25px",
+    width: "500px",
+  }}
+>
+  <input
+    type="text"
+    placeholder="Cari kode atau nama asset..."
+    value={searchAsset}
+    onChange={(e) =>
+      setSearchAsset(
+        e.target.value
+      )
+    }
+    style={{
+      width: "100%",
+      padding: "12px",
+      borderRadius: "8px",
+      border:
+        "1px solid #d1d5db",
+      marginBottom: "10px",
+    }}
+  />
+
+  <div
+    style={{
+      maxHeight: "250px",
+      overflowY: "auto",
+      border:
+        "1px solid #d1d5db",
+      borderRadius: "8px",
+      background: "#fff",
+    }}
+  >
+    {assets
+      .filter(
+        (asset) =>
+          asset.asset_code
+            ?.toLowerCase()
+            .includes(
+              searchAsset.toLowerCase()
+            ) ||
+          asset.asset_name
+            ?.toLowerCase()
+            .includes(
+              searchAsset.toLowerCase()
+            )
+      )
+      .slice(0, 20)
+      .map((asset) => (
+        <div
+          key={asset.id}
+          onClick={() =>
             pilihAsset(
-              Number(
-                e.target.value
-              )
+              asset.id
             )
           }
           style={{
-            width: "350px",
-            padding: "12px",
-            borderRadius: "8px",
-            border:
-              "1px solid #d1d5db",
+            padding: "10px",
+            cursor: "pointer",
+            borderBottom:
+              "1px solid #eee",
           }}
         >
-          <option value="">
-            Pilih Asset
-          </option>
-
-          {assets.map(
-            (asset) => (
-              <option
-                key={
-                  asset.id
-                }
-                value={
-                  asset.id
-                }
-              >
-                {
-                  asset.asset_code
-                }
-                {" - "}
-                {
-                  asset.asset_name
-                }
-              </option>
-            )
-          )}
-        </select>
-      </div>
+          <b>
+            {
+              asset.asset_code
+            }
+          </b>
+          {" - "}
+          {
+            asset.asset_name
+          }
+        </div>
+      ))}
+  </div>
+</div>
 
       {selectedAsset && (
         <>

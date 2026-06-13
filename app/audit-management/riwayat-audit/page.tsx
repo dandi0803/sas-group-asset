@@ -23,6 +23,11 @@ const [endDate,
   setEndDate] =
   useState("");
 
+  const [
+  selectedSite,
+  setSelectedSite,
+] = useState("");
+
 const [
   showExportMenu,
   setShowExportMenu,
@@ -56,8 +61,16 @@ const [
   } = await supabase
     .from("assets")
     .select(
-      "id, asset_code, asset_name"
-    );
+  "id, asset_code, asset_name, location"
+);
+
+const {
+  data: locations,
+} = await supabase
+  .from("locations")
+  .select("*");
+
+
 const result = await Promise.all(
   (audits || []).map(
     async (audit) => {
@@ -81,27 +94,68 @@ const result = await Promise.all(
             "Tidak Baik"
         );
 
-      return {
-        ...audit,
+      const assetData =
+  assets?.find(
+    (a) =>
+      a.id ===
+      audit.asset_id
+  );
 
-        asset:
-          assets?.find(
-            (a) =>
-              a.id ===
-              audit.asset_id
-          ),
+const locationData =
+  locations?.find(
+    (l) =>
+      l.location_name === assetData?.location ||
+l.nama_lokasi === assetData?.location ||
+l.nama_lokasi_asset === assetData?.location ||
+l.name === assetData?.location ||
+l.location === assetData?.location
+  );
 
-        audit_status:
-          hasFail
-            ? "FAIL"
-            : "PASS",
-      };
+return {
+  ...audit,
+
+  asset: assetData,
+  location: locationData,
+
+  audit_status:
+    hasFail
+      ? "FAIL"
+      : "PASS",
+};
     }
   )
 );
 
 setData(result);
 };
+const filteredData = data.filter((item) => {
+  if (!startDate && !endDate) return true;
+
+  const auditDate = new Date(item.audit_date);
+
+  const start = startDate
+    ? new Date(startDate + "T00:00:00")
+    : null;
+
+  const end = endDate
+    ? new Date(endDate + "T23:59:59")
+    : null;
+
+  if (start && auditDate < start)
+    return false;
+
+  if (end && auditDate > end)
+  return false;
+
+if (
+  selectedSite &&
+  item.location?.site !== selectedSite
+)
+  return false;
+
+return true;
+
+});
 const exportExcel = () => {
   const today = new Date();
 
@@ -111,7 +165,7 @@ const exportExcel = () => {
     today.getFullYear();
 
   const exportData =
-    data.map((item) => ({
+  filteredData.map((item) => ({
       "No Audit":
         item.audit_number,
       "Asset Code":
@@ -175,26 +229,70 @@ const exportPDF = () => {
   );
 
   autoTable(doc, {
-    startY: 35,
-    head: [[
-      "No Audit",
-      "Asset",
-      "Auditor",
-      "Tanggal",
-      "Status",
-    ]],
-    body: data.map(
-      (item) => [
-        item.audit_number,
-        item.asset?.asset_code,
-        item.auditor,
-        item.audit_date,
-        item.audit_status,
-      ]
-    ),
-  });
+  startY: 35,
+  head: [[
+    "No Audit",
+    "Asset",
+    "Auditor",
+    "Tanggal",
+    "Status",
+  ]],
+  body: filteredData.map(
+    (item) => [
+      item.audit_number,
+      item.asset?.asset_code,
+      item.auditor,
+      item.audit_date,
+      item.audit_status,
+    ]
+  ),
+});
 
-  doc.save(
+const pageHeight =
+  doc.internal.pageSize.height;
+
+const pageWidth =
+  doc.internal.pageSize.width;
+
+const signatureY =
+  pageHeight - 45;
+
+doc.setFontSize(10);
+
+doc.text(
+  "Mengetahui,",
+  14,
+  signatureY - 10
+);
+
+const signatures = [
+  "Auditor",
+  "SPV General Affair",
+  "SPV Ops SCM",
+  "Supply Chain Manager",
+];
+
+const startX = 20;
+const gapX = 45;
+
+signatures.forEach((name, index) => {
+  const x = startX + index * gapX;
+
+  doc.text(
+    name,
+    x,
+    signatureY
+  );
+
+  doc.line(
+    x,
+    signatureY + 25,
+    x + 35,
+    signatureY + 25
+  );
+});
+
+doc.save(
     `Riwayat_Audit_${fileDate}.pdf`
   );
 
@@ -238,7 +336,7 @@ const exportPDF = () => {
       }}
     >
       Total Audit :
-      {data.length}
+{filteredData.length}
     </p>
   </div>
 
@@ -272,6 +370,7 @@ const exportPDF = () => {
     }}
   />
 
+
   <input
     type="date"
     value={endDate}
@@ -289,6 +388,42 @@ const exportPDF = () => {
         "8px",
     }}
   />
+
+  <select
+  value={selectedSite}
+  onChange={(e) =>
+    setSelectedSite(
+      e.target.value
+    )
+  }
+  style={{
+    padding: "10px",
+    border:
+      "1px solid #ddd",
+    borderRadius:
+      "8px",
+  }}
+>
+  <option value="">
+    Semua Site
+  </option>
+
+  {[...new Set(
+    data.map(
+      (item) =>
+        item.location?.site
+    )
+  )]
+    .filter(Boolean)
+    .map((site) => (
+      <option
+        key={site}
+        value={site}
+      >
+        {site}
+      </option>
+    ))}
+</select>
 
   <div
     style={{
@@ -443,7 +578,7 @@ const exportPDF = () => {
         </thead>
 
         <tbody>
-          {data.map(
+          {filteredData.map(
             (
               item
             ) => (
