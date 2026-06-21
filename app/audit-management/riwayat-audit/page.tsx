@@ -33,9 +33,42 @@ const [
   setShowExportMenu,
 ] = useState(false);
 
+const [userRole, setUserRole] =
+  useState("");
+
+  const [currentPage, setCurrentPage] =
+  useState(1);
+
+const itemsPerPage = 10;
+
+const isSuperAdmin =
+  userRole.toLowerCase() === "super admin";
+
   useEffect(() => {
-    loadData();
-  }, []);
+  loadData();
+
+  const getUserRole = async () => {
+    const savedUser =
+      localStorage.getItem("user");
+
+    console.log("SAVED USER:", savedUser);
+
+    if (!savedUser) return;
+
+    const parsedUser =
+      JSON.parse(savedUser);
+
+    const role =
+      parsedUser?.role?.trim().toLowerCase() || "";
+
+    console.log("ROLE LOGIN:", role);
+
+    setUserRole(role);
+  };
+
+  getUserRole();
+}, []);
+   
 
   const loadData = async () => {
   const {
@@ -128,6 +161,42 @@ return {
 
 setData(result);
 };
+
+const handleDeleteAudit = async (
+  id: number
+) => {
+  if (!isSuperAdmin) {
+    alert(
+      "Akses ditolak. Hanya Super Admin yang bisa menghapus riwayat audit."
+    );
+    return;
+  }
+
+  const confirmDelete =
+    window.confirm(
+      "Yakin hapus riwayat audit ini?"
+    );
+
+  if (!confirmDelete) return;
+
+  await supabase
+    .from("audit_detail")
+    .delete()
+    .eq("audit_id", id);
+
+  const { error } = await supabase
+    .from("audit_header")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  loadData();
+};
+
 const filteredData = data.filter((item) => {
   if (!startDate && !endDate) return true;
 
@@ -156,6 +225,17 @@ if (
 return true;
 
 });
+
+const totalPages = Math.ceil(
+  filteredData.length / itemsPerPage
+);
+
+const paginatedData =
+  filteredData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
 const exportExcel = () => {
   const today = new Date();
 
@@ -251,11 +331,17 @@ const exportPDF = () => {
 const pageHeight =
   doc.internal.pageSize.height;
 
-const pageWidth =
-  doc.internal.pageSize.width;
+const finalY =
+  (doc as any).lastAutoTable.finalY || 35;
+
+if (finalY > pageHeight - 80) {
+  doc.addPage();
+}
 
 const signatureY =
-  pageHeight - 45;
+  finalY > pageHeight - 80
+    ? 40
+    : finalY + 20;
 
 doc.setFontSize(10);
 
@@ -338,9 +424,9 @@ doc.save(
       Total Audit :
 {filteredData.length}
     </p>
+  
   </div>
 
-  
 
   <div
   style={{
@@ -578,7 +664,7 @@ doc.save(
         </thead>
 
         <tbody>
-          {filteredData.map(
+          {paginatedData.map(
             (
               item
             ) => (
@@ -656,35 +742,95 @@ doc.save(
     {item.audit_status}
   </span>
 </td>
-                <td
-  style={tdStyle}
->
-  <button
-    onClick={() =>
-      window.location.href =
-        `/audit-management/riwayat-audit/${item.id}`
-    }
+                <td style={tdStyle}>
+  <div
     style={{
-      background:
-        "#2563eb",
-      color: "#fff",
-      border: "none",
-      padding:
-        "8px 12px",
-      borderRadius:
-        "6px",
-      cursor:
-        "pointer",
+      display: "flex",
+      gap: "8px",
     }}
   >
-    Detail
+    <button
+      onClick={() =>
+        window.location.href =
+          `/audit-management/riwayat-audit/${item.id}`
+      }
+      style={{
+        background: "#2563eb",
+        color: "#fff",
+        border: "none",
+        padding: "8px 12px",
+        borderRadius: "6px",
+        cursor: "pointer",
+      }}
+    >
+      Detail
+    </button>
+
+{isSuperAdmin && (
+  <button
+    onClick={() =>
+      handleDeleteAudit(item.id)
+    }
+    style={{
+      background: "#dc2626",
+      color: "#fff",
+      border: "none",
+      padding: "8px 12px",
+      borderRadius: "6px",
+      cursor: "pointer",
+    }}
+  >
+    Hapus
   </button>
+)}
+
+  </div>
 </td>
               </tr>
             )
           )}
         </tbody>
       </table>
+      <div
+  style={{
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "20px",
+    marginTop: "20px",
+  }}
+>
+  <button
+    onClick={() =>
+      setCurrentPage(
+        currentPage - 1
+      )
+    }
+    disabled={
+      currentPage === 1
+    }
+  >
+    Previous
+  </button>
+
+  <span>
+    Page {currentPage} of {totalPages}
+  </span>
+
+  <button
+    onClick={() =>
+      setCurrentPage(
+        currentPage + 1
+      )
+    }
+    disabled={
+      currentPage === totalPages
+    }
+  >
+    Next
+  </button>
+</div>
+
     </div>
   );
 }
